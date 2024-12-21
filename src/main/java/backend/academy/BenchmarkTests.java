@@ -1,6 +1,6 @@
 package backend.academy;
 
-
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
@@ -23,6 +23,7 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
 
 @State(Scope.Thread)
+@SuppressWarnings({"UncommentedMain", "MagicNumber", "MultipleStringLiterals"})
 public class BenchmarkTests {
     public static void main(String[] args) throws RunnerException {
         Options options = new OptionsBuilder()
@@ -42,8 +43,7 @@ public class BenchmarkTests {
         new Runner(options).run();
     }
 
-    record Student(String name, String surname) {
-    }
+
 
     private Student student;
     private String name;
@@ -51,10 +51,9 @@ public class BenchmarkTests {
     private MethodHandle methodHandleGetName;
     private Function<Student, String> getName;
 
-
-
     @SneakyThrows
     @Setup
+    @SuppressFBWarnings("RFI_SET_ACCESSIBLE")
     public void setup() {
         student = new Student("Danil", "Martemyanov");
 
@@ -67,8 +66,8 @@ public class BenchmarkTests {
         MethodType mType = MethodType.methodType(String.class);
         methodHandleGetName = lookup.findVirtual(Student.class, "name", mType);
 
-         getName =
-             (Function<Student, String>) createGetter(lookup, methodHandleGetName);
+        getName =
+            (Function<Student, String>) createGetter(lookup, methodHandleGetName);
 
     }
 
@@ -95,25 +94,27 @@ public class BenchmarkTests {
 
     @Benchmark
     public void lambdaMetafactory(Blackhole bh) {
-        name =  getName.apply(student);
+        name = getName.apply(student);
         bh.consume(name);
     }
 
-
     private static Function createGetter(final MethodHandles.Lookup lookup, final MethodHandle getter)
-    throws Exception {
+        throws Exception {
         final CallSite callSite = LambdaMetafactory.metafactory(lookup, "apply",
             MethodType.methodType(Function.class),
             MethodType.methodType(Object.class, Object.class),
             getter,
             getter.type()
-            );
+        );
 
         try {
             return (Function) callSite.getTarget().invokeExact();
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
+    }
+
+    record Student(String name, String surname) {
     }
 
 }
