@@ -1,7 +1,14 @@
 package backend.academy;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+
+import java.lang.invoke.CallSite;
+import java.lang.invoke.LambdaMetafactory;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import lombok.SneakyThrows;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Mode;
@@ -14,15 +21,6 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
-import java.lang.invoke.CallSite;
-import java.lang.invoke.LambdaMetafactory;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.reflect.Method;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
 @State(Scope.Thread)
 public class BenchmarkTests {
@@ -38,7 +36,7 @@ public class BenchmarkTests {
             .warmupIterations(1)
             .warmupTime(TimeValue.seconds(5))
             .measurementIterations(1)
-            .measurementTime(TimeValue.seconds(5))
+            .measurementTime(TimeValue.minutes(2))
             .build();
 
         new Runner(options).run();
@@ -51,6 +49,7 @@ public class BenchmarkTests {
     private String name;
     private Method method;
     private MethodHandle methodHandleGetName;
+    private Function<Student, String> getName;
 
 
 
@@ -67,6 +66,9 @@ public class BenchmarkTests {
 
         MethodType mType = MethodType.methodType(String.class);
         methodHandleGetName = lookup.findVirtual(Student.class, "name", mType);
+
+         getName =
+             (Function<Student, String>) createGetter(lookup, methodHandleGetName);
 
     }
 
@@ -93,10 +95,25 @@ public class BenchmarkTests {
 
     @Benchmark
     public void lambdaMetafactory(Blackhole bh) {
-
+        name =  getName.apply(student);
+        bh.consume(name);
     }
 
 
+    private static Function createGetter(final MethodHandles.Lookup lookup, final MethodHandle getter)
+    throws Exception {
+        final CallSite callSite = LambdaMetafactory.metafactory(lookup, "apply",
+            MethodType.methodType(Function.class),
+            MethodType.methodType(Object.class, Object.class),
+            getter,
+            getter.type()
+            );
 
+        try {
+            return (Function) callSite.getTarget().invokeExact();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 }
