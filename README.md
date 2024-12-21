@@ -135,3 +135,13 @@ mvn help:describe -Dplugin=compiler
   https://docs.oracle.com/en/java/javase/22/docs/api/index.html
 
 [course-url]: https://edu.tinkoff.ru/all-activities/courses/870efa9d-7067-4713-97ae-7db256b73eab
+
+
+## Таблица с результатами бенчмарков
+
+| Benchmark                | Mode | Score  | Units |
+|--------------------------|------|--------|-------|
+| BenchmarkTests.directAccess | aygt | 0,800  | ns/op |
+| BenchmarkTests.lambdaMetafactory | aygt | 0,895  | ns/op |
+| BenchmarkTests.methodHandle | aygt | 3,136  | ns/op |
+| BenchmarkTests.reflection | aygt | 5,018  | ns/op |
